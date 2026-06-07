@@ -27,3 +27,6 @@ pip-delete-this-directory.txt
 *.njsproj
 *.sln
 *.swp
+
+# ── RAG Datastores ────────────────────────────────────────────────────────────
+chroma_db/
