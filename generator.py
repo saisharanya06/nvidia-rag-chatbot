@@ -163,20 +163,21 @@ class GeminiGenerator:
                 return any(k in exc_str for k in ["503", "502", "429", "UNAVAILABLE", "EXHAUSTED", "LIMIT"])
 
             @retry(
-                stop=stop_after_attempt(10),
-                wait=wait_exponential(multiplier=2, min=3, max=15),
+                stop=stop_after_attempt(3),
+                wait=wait_exponential(multiplier=2, min=3, max=10),
                 retry=retry_if_exception(is_retryable_error),
                 reraise=True
             )
             def call_api():
-                return self._model.generate_content(prompt)
+                return self._model.generate_content(prompt, request_options={"timeout": 15.0})
 
-            logger.info("Calling Gemini API (with auto-retry on 503/429)...")
+            logger.info("Calling Gemini API (timeout=15s, 3 attempts max)...")
             response = call_api()
             answer_text = response.text
         except Exception as exc:
-            logger.error("Gemini API error after retries: %s", exc)
+            logger.error("Gemini API error: %s", exc)
             answer_text = f"⚠️ Error generating answer: {exc}"
+
 
         citations = self.format_citations(chunks)
 
