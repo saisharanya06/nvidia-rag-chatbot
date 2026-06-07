@@ -308,18 +308,7 @@ with st.sidebar:
             if chosen != "All Sections":
                 section_filter = chosen
 
-    # ── Suggested Questions ───────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown("## 💡 Suggested Questions")
-    if st.session_state.suggested_questions:
-        st.caption("Click a question to run it:")
-        for idx, q_item in enumerate(st.session_state.suggested_questions):
-            if st.button(q_item["label"], key=f"side_q_{idx}", use_container_width=True):
-                st.session_state.temp_query = q_item["query"]
-                st.session_state.suggested_questions.pop(idx)
-                st.rerun()
-    else:
-        st.info("All suggestions asked!")
+
 
     # ── API key status ────────────────────────────────────────────────────
     st.markdown("---")
