@@ -162,6 +162,24 @@ def _init_state():
         "generator": None,
         "db_ready": False,
         "sections": [],
+        "suggested_questions": [
+            {
+                "label": "📈 FY2025 Revenue Growth",
+                "query": "What was NVIDIA's total revenue for fiscal year 2025 and how does it compare to fiscal year 2024?"
+            },
+            {
+                "label": "⚠️ US Export Controls Risk",
+                "query": "What are the primary risk factors related to US export controls on China?"
+            },
+            {
+                "label": "🔧 Blackwell & Supply Constraints",
+                "query": "Explain the role of TSMC and supply constraints in NVIDIA's operations."
+            },
+            {
+                "label": "🌐 Data Center Networking Platforms",
+                "query": "What networking platforms does NVIDIA offer in its Data Center business?"
+            }
+        ]
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -290,6 +308,19 @@ with st.sidebar:
             if chosen != "All Sections":
                 section_filter = chosen
 
+    # ── Suggested Questions ───────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("## 💡 Suggested Questions")
+    if st.session_state.suggested_questions:
+        st.caption("Click a question to run it:")
+        for idx, q_item in enumerate(st.session_state.suggested_questions):
+            if st.button(q_item["label"], key=f"side_q_{idx}", use_container_width=True):
+                st.session_state.temp_query = q_item["query"]
+                st.session_state.suggested_questions.pop(idx)
+                st.rerun()
+    else:
+        st.info("All suggestions asked!")
+
     # ── API key status ────────────────────────────────────────────────────
     st.markdown("---")
     st.markdown("## 🔑 API Key")
@@ -302,7 +333,27 @@ with st.sidebar:
     st.markdown("---")
     if st.button("🗑️ Clear Chat History", use_container_width=True):
         st.session_state.chat_history = []
+        # Reset suggested questions
+        st.session_state.suggested_questions = [
+            {
+                "label": "📈 FY2025 Revenue Growth",
+                "query": "What was NVIDIA's total revenue for fiscal year 2025 and how does it compare to fiscal year 2024?"
+            },
+            {
+                "label": "⚠️ US Export Controls Risk",
+                "query": "What are the primary risk factors related to US export controls on China?"
+            },
+            {
+                "label": "🔧 Blackwell & Supply Constraints",
+                "query": "Explain the role of TSMC and supply constraints in NVIDIA's operations."
+            },
+            {
+                "label": "🌐 Data Center Networking Platforms",
+                "query": "What networking platforms does NVIDIA offer in its Data Center business?"
+            }
+        ]
         st.rerun()
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -333,21 +384,30 @@ for entry in st.session_state.chat_history:
 if not st.session_state.chat_history:
     st.markdown("### 💡 Suggested Questions")
     st.caption("Click any of the questions below to ask the chatbot:")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("📈 FY2025 Revenue Growth", use_container_width=True):
-            st.session_state.temp_query = "What was NVIDIA's total revenue for fiscal year 2025 and how does it compare to fiscal year 2024?"
-            st.rerun()
-        if st.button("⚠️ US Export Controls Risk", use_container_width=True):
-            st.session_state.temp_query = "What are the primary risk factors related to US export controls on China?"
-            st.rerun()
-    with col2:
-        if st.button("🔧 Blackwell & Supply Constraints", use_container_width=True):
-            st.session_state.temp_query = "Explain the role of TSMC and supply constraints in NVIDIA's operations."
-            st.rerun()
-        if st.button("🌐 Data Center Networking Platforms", use_container_width=True):
-            st.session_state.temp_query = "What networking platforms does NVIDIA offer in its Data Center business?"
-            st.rerun()
+    if st.session_state.suggested_questions:
+        col1, col2 = st.columns(2)
+        # Split remaining questions into two columns
+        half = (len(st.session_state.suggested_questions) + 1) // 2
+        col1_list = st.session_state.suggested_questions[:half]
+        col2_list = st.session_state.suggested_questions[half:]
+        
+        with col1:
+            for idx, q_item in enumerate(col1_list):
+                if st.button(q_item["label"], key=f"main_col1_q_{idx}", use_container_width=True):
+                    st.session_state.temp_query = q_item["query"]
+                    # Remove from original list
+                    st.session_state.suggested_questions.remove(q_item)
+                    st.rerun()
+        with col2:
+            for idx, q_item in enumerate(col2_list):
+                if st.button(q_item["label"], key=f"main_col2_q_{idx}", use_container_width=True):
+                    st.session_state.temp_query = q_item["query"]
+                    # Remove from original list
+                    st.session_state.suggested_questions.remove(q_item)
+                    st.rerun()
+    else:
+        st.info("All suggested questions asked! Click Clear Chat History in the sidebar to reset.")
+
 
 
 # ── Question input ────────────────────────────────────────────────────────
