@@ -1,0 +1,11 @@
+pdfplumber
+chromadb
+sentence-transformers
+rank-bm25
+langchain
+langchain-text-splitters
+google-generativeai
+torch
+streamlit
+python-dotenv
+tiktoken
