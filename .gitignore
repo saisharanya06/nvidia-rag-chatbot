@@ -28,5 +28,3 @@ pip-delete-this-directory.txt
 *.sln
 *.swp
 
-# ── RAG Datastores ────────────────────────────────────────────────────────────
-chroma_db/
