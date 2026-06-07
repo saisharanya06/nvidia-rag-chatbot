@@ -9,3 +9,4 @@ torch
 streamlit
 python-dotenv
 tiktoken
+tenacity
