@@ -190,6 +190,42 @@ def _check_db() -> tuple[bool, str]:
         return False, str(e)
 
 
+def clean_filename(filename: str) -> str:
+    """Converts a raw filename like nasdaq-nvda-2025-10K-25670928.pdf to a clean title."""
+    name = Path(filename).stem
+    name = name.replace("-", " ").replace("_", " ")
+    words = name.split()
+    cleaned_words = []
+    for w in words:
+        # Skip long ID numbers (e.g., date codes, filing numbers) but keep years
+        if w.isdigit() and len(w) > 4:
+            continue
+        if w.lower() == "10k":
+            cleaned_words.append("10-K")
+        elif len(w) <= 4 and w.isalpha():
+            cleaned_words.append(w.upper())
+        else:
+            cleaned_words.append(w.capitalize())
+    title = " ".join(cleaned_words)
+    return title or "Document"
+
+
+def _get_active_doc_title() -> str:
+    """Retrieve the clean title of the active document stored in the database."""
+    try:
+        import chromadb
+        client = chromadb.PersistentClient(path=str(CHROMA_DIR))
+        col = client.get_collection(COLLECTION_NAME)
+        first_doc = col.get(limit=1, include=["metadatas"])
+        if first_doc and first_doc["metadatas"]:
+            fn = first_doc["metadatas"][0].get("file_name", "")
+            if fn:
+                return clean_filename(fn)
+    except Exception:
+        pass
+    return "Document"
+
+
 @st.cache_resource(show_spinner="Loading retriever models …")
 def _load_retriever():
     from retriever import HybridRetriever
@@ -202,13 +238,16 @@ def _load_retriever():
 # ─────────────────────────────────────────────────────────────────────────────
 # Header
 # ─────────────────────────────────────────────────────────────────────────────
+active_title = _get_active_doc_title()
+
 st.markdown(
-    '<div class="main-header">'
-    "<h1>🟢 NVIDIA 10-K RAG Chatbot</h1>"
-    "<p>Ask questions about NVIDIA's 2025 Annual Report — powered by hybrid retrieval &amp; Gemini</p>"
-    "</div>",
+    f'<div class="main-header">'
+    f"<h1>🟢 {active_title} RAG Chatbot</h1>"
+    f"<p>Ask questions about the {active_title} — powered by hybrid retrieval &amp; Gemini</p>"
+    f"</div>",
     unsafe_allow_html=True,
 )
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -270,6 +309,15 @@ with st.sidebar:
         from ingest import build_vector_store
 
         logger.info("🔨 Knowledge base build request started for PDF: %s", selected_pdf.name)
+        
+        # ── Release database locks before rebuilding ─────────────────────────
+        _load_retriever.clear()
+        st.session_state.retriever = None
+        st.session_state.sections = []
+        import gc
+        gc.collect()
+        time.sleep(0.5)  # Give SQLite a moment to close active file handles
+
         progress_bar = st.progress(0, text="Starting …")
         status_text = st.empty()
         stage_map = {"extract": 0.10, "sections": 0.20, "chunk": 0.35,
@@ -282,6 +330,7 @@ with st.sidebar:
 
         try:
             count = build_vector_store(selected_pdf, progress_callback=_progress_cb)
+
             logger.info("✅ Knowledge base built successfully. Total chunks stored: %d", count)
             st.success(f"✅ Knowledge base built — **{count}** chunks stored.")
             st.session_state.db_ready = True
@@ -394,8 +443,9 @@ if query:
             import generator
             importlib.reload(generator)
             
-            gen = generator.GeminiGenerator()
+            gen = generator.GeminiGenerator(document_name=active_title)
             result = gen.generate_answer(query, chunks)
+
             
             if "Error generating answer" in result["answer"] or result["answer"].startswith("Error:"):
                 logger.error("❌ Gemini generation failed. Response content: %s", result["answer"])

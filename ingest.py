@@ -211,7 +211,8 @@ def generate_embeddings(
     """
     if model is None:
         logger.info("Loading embedding model: %s …", EMBEDDING_MODEL)
-        model = SentenceTransformer(EMBEDDING_MODEL)
+        model = SentenceTransformer(EMBEDDING_MODEL, device="cpu")
+
 
     texts = [c["text"] for c in chunks]
     total_batches = (len(texts) + EMBEDDING_BATCH_SIZE - 1) // EMBEDDING_BATCH_SIZE
@@ -235,6 +236,7 @@ def generate_embeddings(
 def store_in_chromadb(
     chunks: list[dict[str, Any]],
     embeddings: list[list[float]],
+    file_name: str,
 ) -> int:
     """
     Persist chunks, embeddings, and metadata into a ChromaDB collection.
@@ -243,20 +245,31 @@ def store_in_chromadb(
     ----------
     chunks : list[dict]
     embeddings : list[list[float]]
+    file_name : str
 
     Returns
     -------
     int
         Number of documents stored.
     """
+    # Delete the entire database folder to ensure a completely fresh start with no residual data
+    import shutil
+    if Path(CHROMA_DIR).exists():
+        try:
+            shutil.rmtree(CHROMA_DIR)
+            logger.info("Cleared old database directory: %s", CHROMA_DIR)
+        except Exception as e:
+            logger.warning("Failed to clear database directory: %s. Proceeding with collection deletion.", e)
+
     client = chromadb.PersistentClient(path=str(CHROMA_DIR))
 
-    # Delete existing collection to avoid duplicates on re-ingest
+    # Delete existing collection if folder cleanup was partial
     try:
         client.delete_collection(COLLECTION_NAME)
         logger.info("Deleted existing collection '%s'.", COLLECTION_NAME)
     except Exception:
         pass
+
 
     collection = client.get_or_create_collection(
         name=COLLECTION_NAME,
@@ -275,6 +288,7 @@ def store_in_chromadb(
                 {
                     "page_number": c["page_number"],
                     "section_name": c["section_name"],
+                    "file_name": file_name,
                 }
                 for c in chunks[start:end]
             ],
@@ -283,6 +297,7 @@ def store_in_chromadb(
     count = collection.count()
     logger.info("Stored %d documents in ChromaDB.", count)
     return count
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -332,7 +347,8 @@ def build_vector_store(
     embeddings, _ = generate_embeddings(chunks)
 
     _cb("store", "Storing in ChromaDB…")
-    count = store_in_chromadb(chunks, embeddings)
+    count = store_in_chromadb(chunks, embeddings, file_name=pdf_path.name)
+
 
     _cb("done", f"✅ Stored {count} chunks successfully.")
     return count

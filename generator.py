@@ -19,11 +19,12 @@ from config import GEMINI_API_KEY, LLM_MODEL
 logger = logging.getLogger(__name__)
 
 # ── System prompt ────────────────────────────────────────────────────────────
-SYSTEM_INSTRUCTION = """You are an AI financial assistant specializing in analyzing the NVIDIA 2025 Annual Report (10-K).
+# ── System prompt template ────────────────────────────────────────────────────
+SYSTEM_INSTRUCTION_TEMPLATE = """You are an AI financial assistant specializing in analyzing the {document_name}.
 
 RULES:
 1. Answer the user's question ONLY using the provided context passages.
-2. If asked about your identity (e.g., "who are you", "what is your purpose", "what do you do"), explain that you are an AI assistant designed to help analyze and answer questions about the NVIDIA 2025 Annual Report (10-K).
+2. If asked about your identity (e.g., "who are you", "what is your purpose", "what do you do"), explain that you are an AI assistant designed to help analyze and answer questions about the {document_name}.
 3. Do NOT use robotic introduction phrases such as "Based on the provided context", "According to the document", or "Based on the above information". Answer questions naturally, directly, and professionally as an expert assistant.
 4. If the context does not contain enough information to answer a factual question, say:
    "I could not find sufficient information in the retrieved context to answer this question."
@@ -43,6 +44,8 @@ class GeminiGenerator:
     ----------
     api_key : str | None
         Gemini API key.  Falls back to ``config.GEMINI_API_KEY``.
+    document_name : str
+        Active document name for AI identity.
 
     Raises
     ------
@@ -50,7 +53,7 @@ class GeminiGenerator:
         If no API key is available.
     """
 
-    def __init__(self, api_key: str | None = None) -> None:
+    def __init__(self, api_key: str | None = None, document_name: str = "the uploaded report") -> None:
         key = api_key or GEMINI_API_KEY
         if not key:
             raise ValueError(
@@ -58,11 +61,14 @@ class GeminiGenerator:
                 "Add it to your .env file or pass it explicitly."
             )
         genai.configure(api_key=key)
+        
+        system_instruction = SYSTEM_INSTRUCTION_TEMPLATE.format(document_name=document_name)
         self._model = genai.GenerativeModel(
             model_name=LLM_MODEL,
-            system_instruction=SYSTEM_INSTRUCTION,
+            system_instruction=system_instruction,
         )
-        logger.info("Gemini generator initialised (model=%s).", LLM_MODEL)
+        logger.info("Gemini generator initialised (model=%s, doc=%s).", LLM_MODEL, document_name)
+
 
     # ── Prompt construction ──────────────────────────────────────────────────
 

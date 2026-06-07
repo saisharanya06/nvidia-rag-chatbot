@@ -93,6 +93,12 @@ class HybridRetriever:
         self._all_docs: list[str] = all_data["documents"]
         self._all_metas: list[dict] = all_data["metadatas"]
 
+        # Get active file name from metadata
+        self.active_file_name = "Document"
+        if self._all_metas:
+            self.active_file_name = self._all_metas[0].get("file_name", "Document")
+
+
         # ── BM25 index ────────────────────────────────────────────────────
         tokenized_corpus = [_tokenize(doc) for doc in self._all_docs]
         self._bm25 = BM25Okapi(tokenized_corpus)
@@ -100,11 +106,12 @@ class HybridRetriever:
 
         # ── Embedding model ───────────────────────────────────────────────
         logger.info("Loading embedding model: %s …", EMBEDDING_MODEL)
-        self._embedder = SentenceTransformer(EMBEDDING_MODEL)
+        self._embedder = SentenceTransformer(EMBEDDING_MODEL, device="cpu")
 
         # ── Reranker ──────────────────────────────────────────────────────
         logger.info("Loading reranker: %s …", RERANKER_MODEL)
-        self._reranker = CrossEncoder(RERANKER_MODEL)
+        self._reranker = CrossEncoder(RERANKER_MODEL, device="cpu")
+
 
     # ── Vector search ────────────────────────────────────────────────────────
 
