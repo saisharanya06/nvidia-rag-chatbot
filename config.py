@@ -39,7 +39,7 @@ COLLECTION_NAME = "nvidia_10k"
 
 # ── LLM ──────────────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-LLM_MODEL = "gemini-2.5-flash"
+LLM_MODEL = "gemini-flash-latest"
 
 # ── 10-K Section heading patterns ────────────────────────────────────────────
 # Ordered list of (regex_pattern, canonical_section_name).
