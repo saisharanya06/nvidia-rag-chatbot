@@ -467,7 +467,14 @@ if query:
             if "Error generating answer" in result["answer"] or result["answer"].startswith("Error:"):
                 logger.error("❌ Gemini generation failed. Response content: %s", result["answer"])
             else:
-                logger.info("✅ Gemini generated answer successfully. Citations:\n%s", result["citations"])
+                logger.info("✅ Gemini generated answer successfully.")
+                logger.info("🤖 Generated Answer:\n%s", result["answer"])
+                logger.info("📌 Citations/Sources:\n%s", result["citations"])
+                usage = result.get("usage", {})
+                logger.info("⚡ Token Usage: Input: %d | Output: %d | Total: %d",
+                            usage.get("prompt_tokens", 0),
+                            usage.get("completion_tokens", 0),
+                            usage.get("total_tokens", 0))
         except Exception as exc:
             logger.error("❌ Generation error: %s", exc, exc_info=True)
             st.error(f"Generation error: {exc}")
@@ -480,6 +487,7 @@ if query:
             "answer": result["answer"],
             "citations": result["citations"],
             "chunks": chunks,
+            "usage": result.get("usage"),
         }
     )
     st.rerun()
