@@ -30,8 +30,8 @@ CHUNK_SIZE = 800       # tokens
 CHUNK_OVERLAP = 150    # tokens
 
 # ── Retrieval parameters ────────────────────────────────────────────────────
-TOP_K_RETRIEVAL = 10   # candidates from each retriever before reranking
-TOP_K_RERANK = 5       # final chunks after reranking
+TOP_K_RETRIEVAL = 20   # candidates from each retriever before reranking
+TOP_K_RERANK = 7       # final chunks after reranking
 RRF_K = 60             # reciprocal rank fusion constant
 
 # ── ChromaDB ─────────────────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ COLLECTION_NAME = "nvidia_10k"
 
 # ── LLM ──────────────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-LLM_MODEL = "gemini-flash-lite-latest"
+LLM_MODEL = "gemini-flash-latest"
 
 # ── 10-K Section heading patterns ────────────────────────────────────────────
 # Ordered list of (regex_pattern, canonical_section_name).
