@@ -165,7 +165,7 @@ class GeminiGenerator:
 
             def is_retryable_error(exception: Exception) -> bool:
                 exc_str = str(exception).upper()
-                return any(k in exc_str for k in ["503", "502", "429", "UNAVAILABLE", "EXHAUSTED", "LIMIT"])
+                return any(k in exc_str for k in ["503", "502", "504", "429", "UNAVAILABLE", "EXHAUSTED", "LIMIT", "DEADLINE", "TIMEOUT"])
 
             @retry(
                 stop=stop_after_attempt(3),
@@ -174,9 +174,9 @@ class GeminiGenerator:
                 reraise=True
             )
             def call_api():
-                return self._model.generate_content(prompt, request_options={"timeout": 15.0})
+                return self._model.generate_content(prompt, request_options={"timeout": 60.0})
 
-            logger.info("Calling Gemini API (timeout=15s, 3 attempts max)...")
+            logger.info("Calling Gemini API (timeout=60s, 3 attempts max)...")
             response = call_api()
             answer_text = response.text
         except Exception as exc:

@@ -37,7 +37,8 @@ from pathlib import Path
 
 import streamlit as st
 
-from config import CHROMA_DIR, COLLECTION_NAME, DATA_DIR, GEMINI_API_KEY, DEFAULT_PDF
+import config
+from config import CHROMA_DIR, COLLECTION_NAME, DATA_DIR, DEFAULT_PDF
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Page configuration
@@ -310,13 +311,19 @@ with st.sidebar:
 
 
 
-    # ── API key status ────────────────────────────────────────────────────
+    # ── API Status ────────────────────────────────────────────────────
     st.markdown("---")
-    st.markdown("## 🔑 API Key")
-    if GEMINI_API_KEY:
-        st.success("Gemini API key loaded ✓")
+    st.markdown("## 🔑 API Status")
+    if config.GEMINI_API_KEY:
+        st.markdown(
+            '<span class="status-badge status-ready">● API Active</span>',
+            unsafe_allow_html=True,
+        )
     else:
-        st.error("Missing `GEMINI_API_KEY` in `.env`")
+        st.markdown(
+            '<span class="status-badge status-empty">● API Disconnected</span>',
+            unsafe_allow_html=True,
+        )
 
     # ── Clear chat ────────────────────────────────────────────────────────
     st.markdown("---")
@@ -369,33 +376,30 @@ for entry in st.session_state.chat_history:
         )
 
 
-# Display suggested questions if chat history is empty
-if not st.session_state.chat_history:
+# Display suggested questions if any remain
+if st.session_state.suggested_questions:
     st.markdown("### 💡 Suggested Questions")
     st.caption("Click any of the questions below to ask the chatbot:")
-    if st.session_state.suggested_questions:
-        col1, col2 = st.columns(2)
-        # Split remaining questions into two columns
-        half = (len(st.session_state.suggested_questions) + 1) // 2
-        col1_list = st.session_state.suggested_questions[:half]
-        col2_list = st.session_state.suggested_questions[half:]
-        
-        with col1:
-            for idx, q_item in enumerate(col1_list):
-                if st.button(q_item["label"], key=f"main_col1_q_{idx}", use_container_width=True):
-                    st.session_state.temp_query = q_item["query"]
-                    # Remove from original list
-                    st.session_state.suggested_questions.remove(q_item)
-                    st.rerun()
-        with col2:
-            for idx, q_item in enumerate(col2_list):
-                if st.button(q_item["label"], key=f"main_col2_q_{idx}", use_container_width=True):
-                    st.session_state.temp_query = q_item["query"]
-                    # Remove from original list
-                    st.session_state.suggested_questions.remove(q_item)
-                    st.rerun()
-    else:
-        st.info("All suggested questions asked! Click Clear Chat History in the sidebar to reset.")
+    col1, col2 = st.columns(2)
+    # Split remaining questions into two columns
+    half = (len(st.session_state.suggested_questions) + 1) // 2
+    col1_list = st.session_state.suggested_questions[:half]
+    col2_list = st.session_state.suggested_questions[half:]
+    
+    with col1:
+        for idx, q_item in enumerate(col1_list):
+            if st.button(q_item["label"], key=f"suggested_q_{q_item['label']}", use_container_width=True):
+                st.session_state.temp_query = q_item["query"]
+                # Remove from original list
+                st.session_state.suggested_questions.remove(q_item)
+                st.rerun()
+    with col2:
+        for idx, q_item in enumerate(col2_list):
+            if st.button(q_item["label"], key=f"suggested_q_{q_item['label']}", use_container_width=True):
+                st.session_state.temp_query = q_item["query"]
+                # Remove from original list
+                st.session_state.suggested_questions.remove(q_item)
+                st.rerun()
 
 
 
@@ -410,15 +414,20 @@ else:
 
 
 if query:
+    # Remove from suggested questions list if matches
+    for q_item in list(st.session_state.suggested_questions):
+        if q_item["query"].strip().lower() == query.strip().lower():
+            st.session_state.suggested_questions.remove(q_item)
+
     # Validate prerequisites
     if not (_check_db() or st.session_state.db_ready):
         logger.warning("❌ Query rejected: Knowledge base is empty.")
         st.error("⚠️ Knowledge base is empty. Build it first using the sidebar.")
         st.stop()
 
-    if not GEMINI_API_KEY:
+    if not config.GEMINI_API_KEY:
         logger.warning("❌ Query rejected: GEMINI_API_KEY is not set.")
-        st.error("⚠️ `GEMINI_API_KEY` not set in `.env`. Cannot generate answers.")
+        st.error("⚠️ Gemini API key is not configured. Please set `GEMINI_API_KEY` in your environment (e.g. `.env` or Streamlit Secrets).")
         st.stop()
 
     logger.info("🧑 User asked question: '%s' [Filter: %s]", query, section_filter or "None")

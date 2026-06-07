@@ -9,11 +9,10 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# ── Load environment variables ────────────────────────────────────────────────
-load_dotenv()
-
-# ── Paths ─────────────────────────────────────────────────────────────────────
+# ── Paths & Environment ───────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env", override=True)
+
 DATA_DIR = BASE_DIR / "data"
 CHROMA_DIR = BASE_DIR / "chroma_db"
 DEFAULT_PDF = DATA_DIR / "nasdaq-nvda-2025-10K-25670928.pdf"
@@ -38,7 +37,18 @@ RRF_K = 60             # reciprocal rank fusion constant
 COLLECTION_NAME = "nvidia_10k"
 
 # ── LLM ──────────────────────────────────────────────────────────────────────
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+# Try loading from streamlit secrets (useful for Streamlit Cloud deployment) or environment variables
+GEMINI_API_KEY = ""
+try:
+    import streamlit as st
+    if "GEMINI_API_KEY" in st.secrets:
+        GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+except Exception:
+    pass
+
+if not GEMINI_API_KEY:
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
 LLM_MODEL = "gemini-flash-lite-latest"
 
 # ── 10-K Section heading patterns ────────────────────────────────────────────
