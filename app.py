@@ -174,18 +174,20 @@ _init_state()
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _check_db() -> bool:
-    """Return True if ChromaDB collection exists and has documents."""
+def _check_db() -> tuple[bool, str]:
+    """Return (True, '') if ChromaDB collection exists and has documents, else (False, error_msg)."""
     try:
         import chromadb
         client = chromadb.PersistentClient(path=str(CHROMA_DIR))
         col = client.get_collection(COLLECTION_NAME)
         count = col.count()
         logger.info(f"Database check: collection '{COLLECTION_NAME}' has {count} docs.")
-        return count > 0
+        if count > 0:
+            return True, ""
+        return False, "Collection exists but is empty."
     except Exception as e:
         logger.warning("Database check failed: %s", e)
-        return False
+        return False, str(e)
 
 
 @st.cache_resource(show_spinner="Loading retriever models …")
@@ -243,7 +245,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("## 🔧 Knowledge Base")
 
-    db_exists = _check_db()
+    db_exists, db_err = _check_db()
     if db_exists:
         st.markdown(
             '<span class="status-badge status-ready">● DB Ready</span>',
@@ -254,6 +256,9 @@ with st.sidebar:
             '<span class="status-badge status-empty">● DB Empty</span>',
             unsafe_allow_html=True,
         )
+        if db_err and "empty" not in db_err.lower():
+            st.error(f"DB Error: {db_err}")
+
 
     build_btn = st.button(
         "🔨 Build Knowledge Base",
