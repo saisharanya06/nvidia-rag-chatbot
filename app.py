@@ -37,7 +37,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from config import CHROMA_DIR, COLLECTION_NAME, DATA_DIR, GEMINI_API_KEY
+from config import CHROMA_DIR, COLLECTION_NAME, DATA_DIR, GEMINI_API_KEY, DEFAULT_PDF
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Page configuration
@@ -215,31 +215,8 @@ st.markdown(
 # Sidebar
 # ─────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 📄 Document Management")
+    selected_pdf = DEFAULT_PDF
 
-    # ── PDF upload ────────────────────────────────────────────────────────
-    uploaded = st.file_uploader(
-        "Upload a 10-K PDF",
-        type=["pdf"],
-        help="Upload NVIDIA's 10-K or any similar PDF.",
-    )
-    if uploaded is not None:
-        dest = DATA_DIR / uploaded.name
-        with open(dest, "wb") as f:
-            f.write(uploaded.getbuffer())
-        st.success(f"Saved → `{dest.name}`")
-
-    # ── List available PDFs ───────────────────────────────────────────────
-    available_pdfs = sorted(DATA_DIR.glob("*.pdf"))
-    if available_pdfs:
-        selected_pdf = st.selectbox(
-            "Select PDF for ingestion",
-            options=available_pdfs,
-            format_func=lambda p: p.name,
-        )
-    else:
-        st.warning("No PDFs found in `data/`. Upload one above.")
-        selected_pdf = None
 
     # ── Build knowledge base ──────────────────────────────────────────────
     st.markdown("---")
@@ -345,15 +322,43 @@ for entry in st.session_state.chat_history:
         unsafe_allow_html=True,
     )
     # Citations
-    if entry.get("citations"):
+    if entry.get("citations") and entry.get("citations").strip():
         st.markdown(
             f'<div class="citation-box"><strong>📌 Sources:</strong><br>{entry["citations"]}</div>',
             unsafe_allow_html=True,
         )
 
 
+# Display suggested questions if chat history is empty
+if not st.session_state.chat_history:
+    st.markdown("### 💡 Suggested Questions")
+    st.caption("Click any of the questions below to ask the chatbot:")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("📈 FY2025 Revenue Growth", use_container_width=True):
+            st.session_state.temp_query = "What was NVIDIA's total revenue for fiscal year 2025 and how does it compare to fiscal year 2024?"
+            st.rerun()
+        if st.button("⚠️ US Export Controls Risk", use_container_width=True):
+            st.session_state.temp_query = "What are the primary risk factors related to US export controls on China?"
+            st.rerun()
+    with col2:
+        if st.button("🔧 Blackwell & Supply Constraints", use_container_width=True):
+            st.session_state.temp_query = "Explain the role of TSMC and supply constraints in NVIDIA's operations."
+            st.rerun()
+        if st.button("🌐 Data Center Networking Platforms", use_container_width=True):
+            st.session_state.temp_query = "What networking platforms does NVIDIA offer in its Data Center business?"
+            st.rerun()
+
+
 # ── Question input ────────────────────────────────────────────────────────
-query = st.chat_input("Ask a question about NVIDIA's 10-K report …")
+# Check if a suggested question was clicked
+clicked_query = st.session_state.get("temp_query", None)
+if clicked_query:
+    st.session_state.temp_query = None  # Clear temp query
+    query = clicked_query
+else:
+    query = st.chat_input("Ask a question about NVIDIA's 10-K report …")
+
 
 if query:
     # Validate prerequisites
@@ -391,8 +396,12 @@ if query:
     with st.spinner("🤖 Generating answer …"):
         try:
             import importlib
+            import config
+            importlib.reload(config)
             import generator
             importlib.reload(generator)
+            
+            logger.info("Dynamic model check - config: '%s', generator: '%s'", config.LLM_MODEL, generator.LLM_MODEL)
             
             gen = generator.GeminiGenerator()
             result = gen.generate_answer(query, chunks)
