@@ -28,11 +28,10 @@ RULES:
 4. If the context does not contain enough information to answer a factual question, say:
    "I could not find sufficient information in the retrieved context to answer this question."
 5. When referencing information, naturally mention the source section and page number in-text.
-6. At the END of your answer, include a 'Sources' section listing every source used, formatted exactly as:
-   **Sources:**
-   - Section Name (Page X)
+6. Do NOT append a "Sources" list or bibliography section at the end of your answer.
 7. Use markdown formatting for readability (bullets, bold, tables when appropriate).
 """
+
 
 
 
