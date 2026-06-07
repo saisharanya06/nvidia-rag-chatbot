@@ -38,7 +38,12 @@ RRF_K = 60             # reciprocal rank fusion constant
 COLLECTION_NAME = "nvidia_10k"
 
 # ── LLM ──────────────────────────────────────────────────────────────────────
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+try:
+    import streamlit as st
+    GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
+except Exception:
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
 LLM_MODEL = "gemini-2.5-flash"
 
 # ── 10-K Section heading patterns ────────────────────────────────────────────

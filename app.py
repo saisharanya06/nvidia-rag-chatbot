@@ -311,7 +311,7 @@ with st.sidebar:
     if GEMINI_API_KEY:
         st.success("Gemini API key loaded ✓")
     else:
-        st.error("Missing `GEMINI_API_KEY` in `.env`")
+        st.error("Missing `GEMINI_API_KEY`. Add it to your `.env` (local) or Secrets (Streamlit Cloud).")
 
     # ── Clear chat ────────────────────────────────────────────────────────
     st.markdown("---")
@@ -356,7 +356,7 @@ if query:
 
     if not GEMINI_API_KEY:
         logger.warning("❌ Query rejected: GEMINI_API_KEY is not set.")
-        st.error("⚠️ `GEMINI_API_KEY` not set in `.env`. Cannot generate answers.")
+        st.error("⚠️ `GEMINI_API_KEY` is not set. Please configure it in your `.env` file or Streamlit Cloud Secrets.")
         st.stop()
 
     logger.info("🧑 User asked question: '%s' [Filter: %s]", query, section_filter or "None")
