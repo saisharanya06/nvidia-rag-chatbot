@@ -30,7 +30,7 @@ CHUNK_SIZE = 800       # tokens
 CHUNK_OVERLAP = 150    # tokens
 
 # ── Retrieval parameters ────────────────────────────────────────────────────
-TOP_K_RETRIEVAL = 20   # candidates from each retriever before reranking
+TOP_K_RETRIEVAL = 10   # candidates from each retriever before reranking
 TOP_K_RERANK = 5       # final chunks after reranking
 RRF_K = 60             # reciprocal rank fusion constant
 

@@ -19,6 +19,12 @@ from typing import Any
 import chromadb
 from rank_bm25 import BM25Okapi
 from sentence_transformers import CrossEncoder, SentenceTransformer
+import torch
+import time
+
+# Optimize PyTorch CPU execution on constrained containers (Streamlit Cloud)
+torch.set_num_threads(1)
+
 
 from config import (
     CHROMA_DIR,
@@ -309,14 +315,18 @@ class HybridRetriever:
             where = {"section_name": section_filter}
 
         # 1. Dense retrieval
+        t_start = time.time()
         vec_results = self.vector_search(query, k=top_k_retrieval, where=where)
-        logger.info("Vector search returned %d results.", len(vec_results))
+        t_vector = time.time() - t_start
+        logger.info("Vector search returned %d results in %.2f seconds.", len(vec_results), t_vector)
 
         # 2. Sparse retrieval
+        t_start = time.time()
         bm25_results = self.bm25_search(
             query, k=top_k_retrieval, section_filter=section_filter
         )
-        logger.info("BM25 search returned %d results.", len(bm25_results))
+        t_bm25 = time.time() - t_start
+        logger.info("BM25 search returned %d results in %.2f seconds.", len(bm25_results), t_bm25)
 
         # 3. Reciprocal Rank Fusion
         merged = self.reciprocal_rank_fusion(vec_results, bm25_results)
@@ -326,10 +336,14 @@ class HybridRetriever:
         candidates = merged[: top_k_retrieval * 2]
 
         # 4. Cross-encoder reranking
+        t_start = time.time()
         final = self.rerank(query, candidates, top_n=top_k_rerank)
-        logger.info("Reranked to top %d results.", len(final))
+        t_rerank = time.time() - t_start
+        logger.info("Reranked to top %d results in %.2f seconds.", len(final), t_rerank)
+        logger.info("Total retrieval + reranking time: %.2f seconds.", (t_vector + t_bm25 + t_rerank))
 
         return final
+
 
     # ── Available sections ───────────────────────────────────────────────────
 
